@@ -22,6 +22,8 @@ bool UsbPerformancePanel::setup(USBSetup& st)
     if (pluggedInterface != st.wIndex) {
         return false;
     }
+    uint8_t command = st.wValueH;
+    uint8_t value = st.wValueL;
     uint8_t request = st.bRequest;
     uint8_t requestType = st.bmRequestType;
 }
