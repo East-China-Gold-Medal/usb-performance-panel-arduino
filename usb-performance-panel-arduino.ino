@@ -1,5 +1,5 @@
 #include <PluggableUSB.h>
-#define DEBUG
+#define RXLED 17
 typedef enum {
     DATA_CPU_USAGE=0x01,
     DATA_RAM_USAGE=0x02,
@@ -18,10 +18,10 @@ typedef struct {
 void set_pwm(uint8_t channel,uint8_t data)
 {
     #ifdef DEBUG
-    Serial1.println("Channel:");
-    Serial1.println(channel);
-    Serial1.println("Data:");
-    Serial1.println(data);
+    Serial.println("Channel:");
+    Serial.println(channel);
+    Serial.println("Data:");
+    Serial.println(data);
     #endif
 }
 class UsbPerformancePanel:public PluggableUSBModule {
@@ -31,8 +31,7 @@ class UsbPerformancePanel:public PluggableUSBModule {
     public:
         UsbPerformancePanel():PluggableUSBModule(0, 1, epType) {
             #ifdef DEBUG
-            Serial1.begin(9600);
-            Serial1.println("Init......");
+            Serial.begin(9600);
             #endif
             PluggableUSB().plug(this);
         }
@@ -42,6 +41,10 @@ class UsbPerformancePanel:public PluggableUSBModule {
 };
 bool UsbPerformancePanel::setup(USBSetup& st)
 {
+    #ifdef DEBUG
+    Serial.println(pluggedInterface);
+    Serial.println(st.wIndex);
+    #endif
     if (pluggedInterface != st.wIndex) {
         return false;
     }
@@ -50,14 +53,15 @@ bool UsbPerformancePanel::setup(USBSetup& st)
     uint8_t request = st.bRequest;
     uint8_t requestType = st.bmRequestType;
     #ifdef DEBUG
-    Serial1.println(request);
-    Serial1.println(" ");
-    Serial1.println(value);
-    Serial1.println(" ");
-    Serial1.println(request);
+    Serial.println(request);
+    Serial.println(" ");
+    Serial.println(value);
+    Serial.println(" ");
+    Serial.println(request);
     #endif
     switch (request) {
         case COMMAND_QUERY_CAP: {
+            USB_SendControl(0, &availChn, 1);
             return true;
         }
         case COMMAND_SET_USAGE: {
@@ -83,6 +87,8 @@ int UsbPerformancePanel::getDescriptor(USBSetup& st)
 
 void setup()
 {
+    RXLED1;
+    TXLED1;
     // put your setup code here, to run once:
     UsbPerformancePanel panel;
     (void)panel;
@@ -90,6 +96,5 @@ void setup()
 
 void loop()
 {
-    // put your main code here, to run repeatedly:
-
+  
 }
