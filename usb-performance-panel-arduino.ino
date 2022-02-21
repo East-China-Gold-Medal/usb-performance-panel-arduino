@@ -1,5 +1,7 @@
 #include <PluggableUSB.h>
-#define RXLED 17
+#include <EEPROM.h>
+#define CALIBRATION_EEPROM_ADDRESS 0x00
+uint8_t calibration;
 typedef enum {
     DATA_CPU_USAGE=0x01,
     DATA_RAM_USAGE=0x02,
@@ -7,22 +9,32 @@ typedef enum {
     DATA_MAX_OUT  =0x80
 }AvailableDataChannels;
 typedef enum {
+    PWM_PIN_CPU=3,
+    PWM_PIN_RAM=5
+}AvailablePwmPins;
+typedef enum {
     COMMAND_QUERY_CAP = 0xFF,
     COMMAND_SET_USAGE = 0xFE
 }HostOperationCommand;
 typedef struct {
     InterfaceDescriptor id;
 } PerfPanelDescriptor;
-//interface for CBC to implement!
-//tietie cbc
 void set_pwm(uint8_t channel,uint8_t data)
 {
-    #ifdef DEBUG
-    Serial.println("Channel:");
-    Serial.println(channel);
-    Serial.println("Data:");
-    Serial.println(data);
-    #endif
+    uint32_t tmp;
+    tmp = data*calibration;
+    tmp /= 256;
+    switch(channel){
+        case DATA_CPU_USAGE: {
+            analogWrite(PWM_PIN_CPU, (uint8_t)tmp);
+            break;
+        }
+        case DATA_RAM_USAGE: {
+            analogWrite(PWM_PIN_RAM, (uint8_t)tmp);
+            break;
+        }
+    }
+
 }
 class UsbPerformancePanel:public PluggableUSBModule {
     private:
@@ -41,10 +53,6 @@ class UsbPerformancePanel:public PluggableUSBModule {
 };
 bool UsbPerformancePanel::setup(USBSetup& st)
 {
-    #ifdef DEBUG
-    Serial.println(pluggedInterface);
-    Serial.println(st.wIndex);
-    #endif
     if (pluggedInterface != st.wIndex) {
         return false;
     }
@@ -52,13 +60,6 @@ bool UsbPerformancePanel::setup(USBSetup& st)
     uint8_t value = st.wValueL;
     uint8_t request = st.bRequest;
     uint8_t requestType = st.bmRequestType;
-    #ifdef DEBUG
-    Serial.println(request);
-    Serial.println(" ");
-    Serial.println(value);
-    Serial.println(" ");
-    Serial.println(request);
-    #endif
     switch (request) {
         case COMMAND_QUERY_CAP: {
             USB_SendControl(0, &availChn, 1);
@@ -89,7 +90,9 @@ void setup()
 {
     RXLED1;
     TXLED1;
-    // put your setup code here, to run once:
+    calibration = EEPROM.read(CALIBRATION_EEPROM_ADDRESS);
+    if(calibration==0xFF) //Not calibrated......
+        EEPROM.write(CALIBRATION_EEPROM_ADDRESS, 182);
     UsbPerformancePanel panel;
     (void)panel;
 }
