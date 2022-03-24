@@ -1,3 +1,6 @@
+#ifdef CDC_DISABLED
+#pragma message "CDC Disabled. Remember to press <Reset> to enter flash mode."
+#endif
 #include <PluggableUSB.h>
 #include <EEPROM.h>
 #define CALIBRATION_EEPROM_ADDRESS 0x00
@@ -15,7 +18,7 @@ typedef enum {
 typedef enum {
     COMMAND_QUERY_CAP = 0xFF,
     COMMAND_SET_USAGE = 0xFE
-}HostOperationCommand;
+} HostOperationCommand;
 typedef struct {
     InterfaceDescriptor id;
 } PerfPanelDescriptor;
@@ -42,9 +45,6 @@ class UsbPerformancePanel:public PluggableUSBModule {
         uint8_t availChn[1] = {(DATA_CPU_USAGE|DATA_RAM_USAGE)};
     public:
         UsbPerformancePanel():PluggableUSBModule(0, 1, epType) {
-            #ifdef DEBUG
-            Serial.begin(9600);
-            #endif
             PluggableUSB().plug(this);
         }
         bool setup(USBSetup& setup);
@@ -91,8 +91,10 @@ void setup()
     RXLED1;
     TXLED1;
     calibration = EEPROM.read(CALIBRATION_EEPROM_ADDRESS);
-    if(calibration==0xFF) //Not calibrated......
+    if(calibration==0xFF) {//Not calibrated......
         EEPROM.write(CALIBRATION_EEPROM_ADDRESS, 182);
+        calibration = 182;
+    }
     UsbPerformancePanel panel;
     (void)panel;
 }
